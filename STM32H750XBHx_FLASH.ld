@@ -54,21 +54,19 @@ ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
-/* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x400;      /* required amount of heap  */
-_Min_Stack_Size = 0x800; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
-  RAM (rwx)      : ORIGIN = 0x20000000, LENGTH = 131072
-  RAM_AXI0 (rwx)      : ORIGIN = 0x24000000, LENGTH = 262144
-  RAM_AXI1 (rwx)      : ORIGIN = 0x24040000, LENGTH = 262144
-  RAM_D2 (rwx)      : ORIGIN = 0x30000000, LENGTH = 294912
-  RAM_D3 (rwx)      : ORIGIN = 0x38000000, LENGTH = 65536
-  ITCMRAM (rwx)      : ORIGIN = 0x00000000, LENGTH = 65536
-  EXFLASH (rx)      : ORIGIN = 0x90000000, LENGTH = 16777216
-  EXSDRAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 33554432
+  RAM (rwx)      : ORIGIN = 0x20000000, LENGTH = 128K
+  RAM_AXI0 (rwx)      : ORIGIN = 0x24000000, LENGTH = 256K
+  RAM_D2 (rwx)      : ORIGIN = 0x30000000, LENGTH = 288K
+  RAM_D3 (rwx)      : ORIGIN = 0x38000000, LENGTH = 64K
+  ITCMRAM (rwx)      : ORIGIN = 0x00000000, LENGTH = 64K
+  RAM_AXI1 (rwx)      : ORIGIN = 0x24040000, LENGTH = 256K
+  EXSDRAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 32M
+  EXFLASH (rx)      : ORIGIN = 0x90000000, LENGTH = 16M
+  /* RAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 32M */
 }
 
 /* Define output sections */
@@ -168,18 +166,23 @@ SECTIONS
     __bss_end__ = _ebss;
   } > RAM
 
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
+  . = ORIGIN(EXSDRAM);
+  .sdram :
   {
     . = ALIGN(8);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
+    *(.sdram)
+    *(.sdram*)
+    __sdram_end__ = .;
     . = ALIGN(8);
-  } > RAM
+  } > EXSDRAM AT > EXFLASH
 
-  
+  ._user_heap :
+  {
+    . = ALIGN(8);
+    __heap_start__ = .;
+    . = ALIGN(8);
+  } > EXSDRAM
+  __heap_end__ = ORIGIN(EXSDRAM) + LENGTH(EXSDRAM);
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
