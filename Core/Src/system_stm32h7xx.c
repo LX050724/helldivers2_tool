@@ -47,6 +47,7 @@
 #include "stm32h7xx.h"
 #include <math.h>
 #include <stdint.h>
+#include <sys/cdefs.h>
 
 #if !defined  (HSE_VALUE)
 #define HSE_VALUE    ((uint32_t)25000000) /*!< Value of the External oscillator in Hz */
@@ -166,6 +167,8 @@
   * @{
   */
 
+static uint32_t vector_table[166] __attribute__((aligned(0x200)));
+
 /**
   * @brief  Setup the microcontroller system
   *         Initialize the FPU setting and  vector table location
@@ -173,31 +176,61 @@
   * @param  None
   * @retval None
   */
-void SystemInit (void)
-{    
-  uint32_t i, size;
+void SystemInit(void)
+{
+    uint32_t i, size;
 
-  extern uint8_t __noncacheable_bss_start__[], __noncacheable_bss_end__[];
-  extern uint8_t __noncacheable_init_start__[], __noncacheable_init_end__[];
-  extern uint8_t __noncacheable_init_load_addr__[];
-  
-  /* noncacheable bss section */
-  size = __noncacheable_bss_end__ - __noncacheable_bss_start__;
-  for (i = 0; i < size;  i += sizeof(uint64_t)) {
-      *(uint64_t *)(__noncacheable_bss_start__ + i) = 0;
-  }
+    extern uint8_t __bss_start__[], __bss_end__[];
+    extern uint8_t __data_start__[], __data_end__[];
+    extern uint8_t __noncacheable_bss_start__[], __noncacheable_bss_end__[];
+    extern uint8_t __noncacheable_init_start__[], __noncacheable_init_end__[];
+    extern uint8_t __fast_ram_start__[], __fast_ram_end__[];
+    extern uint8_t __noncacheable_init_load_addr__[];
+    extern uint8_t __data_load_addr__[];
+    extern uint8_t __fast_ram_init_load_addr__[];
+    extern uint8_t __isr_vector_start__[], __isr_vector_end__[];
 
-  /* noncacheable init section LMA: etext + data length + ramfunc legnth + tdata length*/
-  size = __noncacheable_init_end__ - __noncacheable_init_start__;
-  for (i = 0; i < size; i += sizeof(uint64_t)) {
-      *(uint64_t *)(__noncacheable_init_start__ + i) = *(uint64_t *)(__noncacheable_init_load_addr__ + i);
-  }
+    size = __data_end__ - __data_start__;
+    for (i = 0; i < size; i += sizeof(uint32_t))
+    {
+        *(uint32_t *)(__data_start__ + i) = *(uint32_t *)(__data_load_addr__ + i);
+    }
 
-  /* Configure the Vector Table location -------------------------------------*/
-#if defined(USER_VECT_TAB_ADDRESS)
-  SCB->VTOR = VECT_TAB_BASE_ADDRESS | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal D1 AXI-RAM or in Internal FLASH */
-  __enable_irq();
-#endif /* USER_VECT_TAB_ADDRESS */
+    size = __bss_end__ - __bss_start__;
+    for (i = 0; i < size; i += sizeof(uint32_t))
+    {
+        *(uint32_t *)(__bss_start__ + i) = 0;
+    }
+
+    /* noncacheable bss section */
+    size = __noncacheable_bss_end__ - __noncacheable_bss_start__;
+    for (i = 0; i < size; i += sizeof(uint64_t))
+    {
+        *(uint64_t *)(__noncacheable_bss_start__ + i) = 0;
+    }
+
+    /* noncacheable init section LMA: etext + data length + ramfunc legnth + tdata length*/
+    size = __fast_ram_end__ - __fast_ram_start__;
+    for (i = 0; i < size; i += sizeof(uint64_t))
+    {
+        *(uint64_t *)(__fast_ram_start__ + i) = *(uint64_t *)(__fast_ram_init_load_addr__ + i);
+    }
+
+    size = __noncacheable_init_end__ - __noncacheable_init_start__;
+    for (i = 0; i < size; i += sizeof(uint64_t))
+    {
+        *(uint64_t *)(__noncacheable_init_start__ + i) = *(uint64_t *)(__noncacheable_init_load_addr__ + i);
+    }
+
+    size = __isr_vector_end__ - __isr_vector_start__;
+    for (i = 0; i < size; i += sizeof(uint32_t))
+    {
+        *(uint32_t *)(((uint8_t *)vector_table) + i) = *(uint32_t *)(__isr_vector_start__ + i);
+    }
+
+    /* Configure the Vector Table location -------------------------------------*/
+    SCB->VTOR = (uint32_t)vector_table; /* Vector Table Relocation in Internal D1 AXI-RAM or in Internal FLASH */
+    __enable_irq();
 }
 
 /**

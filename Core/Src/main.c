@@ -116,7 +116,7 @@ int main(void)
   MX_I2C1_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-    HAL_GPIO_WritePin(LCD_BK_GPIO_Port, LCD_BK_Pin, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Init scheduler */

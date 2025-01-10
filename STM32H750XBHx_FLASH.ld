@@ -64,7 +64,7 @@ MEMORY
   RAM_D3 (rwx)      : ORIGIN = 0x38000000, LENGTH = 64K
   ITCMRAM (rwx)      : ORIGIN = 0x00000000, LENGTH = 64K
   RAM_AXI1 (rwx)      : ORIGIN = 0x24040000, LENGTH = 256K
-  EXSDRAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 32M
+  EXSDRAM (rw)      : ORIGIN = 0xc0000000, LENGTH = 32M
   EXFLASH (rx)      : ORIGIN = 0x90000000, LENGTH = 16M
   /* RAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 32M */
 }
@@ -76,9 +76,22 @@ SECTIONS
   .isr_vector :
   {
     . = ALIGN(4);
+    __isr_vector_start__ = .;
     KEEP(*(.isr_vector)) /* Startup code */
+    __isr_vector_end__ = .;
     . = ALIGN(4);
   } >EXFLASH
+
+  .fast_ram :
+  {
+    . = ALIGN(8);
+    __fast_ram_start__ = .;
+    KEEP(*(.fast_ram*))
+    KEEP(*(.text._fast_ram_*))
+    __fast_ram_end__ = .;
+    . = ALIGN(8);
+  } > ITCMRAM AT> EXFLASH
+  __fast_ram_init_load_addr__ = LOADADDR(.fast_ram);
 
   /* The program code and other data goes into EXFLASH */
   .text :
@@ -135,24 +148,24 @@ SECTIONS
   } >EXFLASH
 
   /* used by the startup to initialize data */
-  _sidata = LOADADDR(.data);
+  __data_load_addr__ = LOADADDR(.data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
   .data : 
   {
     . = ALIGN(4);
-    _sdata = .;        /* create a global symbol at data start */
+    __data_start__ = .;        /* create a global symbol at data start */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
     . = ALIGN(4);
-    _edata = .;        /* define a global symbol at data end */
+    __data_end__ = .;        /* define a global symbol at data end */
   } > RAM AT> EXFLASH
 
   
   /* Uninitialized data section */
   . = ALIGN(4);
-  .bss :
+  .bss (NOLOAD) :
   {
     /* This is used by the startup in order to initialize the .bss secion */
     _sbss = .;         /* define a global symbol at bss start */
@@ -166,24 +179,15 @@ SECTIONS
     __bss_end__ = _ebss;
   } > RAM
 
-  . = ORIGIN(EXSDRAM);
-  .sdram :
-  {
-    . = ALIGN(8);
-    *(.sdram)
-    *(.sdram*)
-    __sdram_end__ = .;
-    . = ALIGN(8);
-  } > EXSDRAM AT > EXFLASH
 
-  __noncacheable_init_load_addr__ = _sidata + SIZEOF(.data);
-  .noncacheable.init : AT(__noncacheable_init_load_addr__) {
+  .noncacheable.init : {
       . = ALIGN(8);
       __noncacheable_init_start__ = .;
       KEEP(*(.noncacheable.init))
       __noncacheable_init_end__ = .;
       . = ALIGN(8);
-  } > RAM_AXI1
+  } > RAM_AXI1 AT> EXFLASH
+  __noncacheable_init_load_addr__ = LOADADDR(.noncacheable.init);
 
   .noncacheable.bss (NOLOAD) : {
     . = ALIGN(8);
@@ -194,10 +198,14 @@ SECTIONS
     . = ALIGN(8);
   } > RAM_AXI1
 
-
-  ._user_heap :
+  . = ORIGIN(EXSDRAM);
+  .sdram :
   {
     . = ALIGN(8);
+    KEEP(*(.sdram))
+    __sdram_bss_start__ = .;
+    KEEP(*(.sdram.bss))
+    __sdram_bss_end__ = .;
     __heap_start__ = .;
     . = ALIGN(8);
   } > EXSDRAM

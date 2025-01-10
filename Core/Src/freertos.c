@@ -28,6 +28,7 @@
 #include "usbd_hid.h"
 #include "usb_device.h"
 #include "GT9147_driver.h"
+#include "lvgl_driver.h"
 
 /* USER CODE END Includes */
 
@@ -135,6 +136,7 @@ void StartDefaultTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
   gt9147_init();
+  lvgl_init();
   /* Infinite loop */
   for(;;)
   {

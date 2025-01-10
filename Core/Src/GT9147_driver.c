@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/cdefs.h>
+#include "sysmem.h"
 
 // #define GT_CMD_WR 0X28 // 写命令
 // #define GT_CMD_RD 0X29 // 读命令
@@ -41,8 +42,8 @@ typedef struct
     uint8_t track_id;
 } GT9147_Point_t;
 
-static uint8_t dma_buf[8] __attribute__((section(".noncacheable.bss")));
-static GT9147_Point_t gt9147_points[5] __attribute__((section(".noncacheable.bss")));
+static uint8_t dma_buf[8] AT_NONCACHEABLE_BSS;
+static GT9147_Point_t gt9147_points[5] AT_NONCACHEABLE_BSS;
 static uint8_t gt9147_touch_num;
 
 

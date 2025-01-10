@@ -74,8 +74,12 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     lvgl
+    lvgl_demos
     # Add user defined libraries
 )
+
+# target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -N)
+# target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -mlong-calls)
 
 add_custom_command(
     TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD  
@@ -83,3 +87,6 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/userfile/usbd_hid.c ${CMAKE_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/userfile/usbd_hid.h ${CMAKE_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc/usbd_hid.h
 )
+
+target_link_libraries(lvgl stm32cubemx)
+

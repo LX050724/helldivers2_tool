@@ -21,6 +21,7 @@
  */
 
 /* Includes */
+#include <sysmem.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include <errno.h>
