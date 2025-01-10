@@ -57,17 +57,19 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define CARD_DETECT_Pin GPIO_PIN_5
+#define CARD_DETECT_GPIO_Port GPIOD
 #define LCD_BK_Pin GPIO_PIN_4
 #define LCD_BK_GPIO_Port GPIOD
 #define LCD_TS_RST_Pin GPIO_PIN_3
 #define LCD_TS_RST_GPIO_Port GPIOD
 #define LED_R_Pin GPIO_PIN_15
 #define LED_R_GPIO_Port GPIOC
+#define LED_TS_INT_Pin GPIO_PIN_12
+#define LED_TS_INT_GPIO_Port GPIOG
+#define LED_TS_INT_EXTI_IRQn EXTI15_10_IRQn
 #define LED_B_Pin GPIO_PIN_8
 #define LED_B_GPIO_Port GPIOI
-#define LED_TS_INT_Pin GPIO_PIN_9
-#define LED_TS_INT_GPIO_Port GPIOC
-#define LED_TS_INT_EXTI_IRQn EXTI9_5_IRQn
 #define KEY_Pin GPIO_PIN_4
 #define KEY_GPIO_Port GPIOH
 

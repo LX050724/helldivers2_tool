@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
+#include "dma.h"
 #include "i2c.h"
 #include "ltdc.h"
 #include "memorymap.h"
@@ -56,25 +58,14 @@
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-typedef struct
-{
-    uint8_t L_ctrl : 1;
-    uint8_t L_shift : 1;
-    uint8_t L_Alt : 1;
-    uint8_t L_gui : 1;
-    uint8_t R_ctrl : 1;
-    uint8_t R_shift : 1;
-    uint8_t R_alt : 1;
-    uint8_t R_gui : 1;
-    uint8_t reserved;
-    uint8_t keys[6];
-} KeyboardData_t;
+
 /* USER CODE END 0 */
 
 /**
@@ -120,43 +111,29 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_LTDC_Init();
   MX_I2C1_Init();
   MX_UART4_Init();
-  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
     HAL_GPIO_WritePin(LCD_BK_GPIO_Port, LCD_BK_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1)
     {
-        HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-        HAL_Delay(300);
-
-        if (HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET)
-        {
-            HAL_Delay(10);
-            if (HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET)
-            {
-                KeyboardData_t Data_Buffer = {};
-
-                Data_Buffer.L_shift = 1;
-                Data_Buffer.keys[0] = 4;
-                USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
-
-                HAL_Delay(15);
-                Data_Buffer.L_shift = 0;
-                Data_Buffer.keys[0] = 0;
-                USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
-                HAL_Delay(15);
-            }
-
-            while ((HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET))
-            {
-            }
-        }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

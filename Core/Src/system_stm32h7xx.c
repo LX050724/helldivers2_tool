@@ -46,6 +46,7 @@
 
 #include "stm32h7xx.h"
 #include <math.h>
+#include <stdint.h>
 
 #if !defined  (HSE_VALUE)
 #define HSE_VALUE    ((uint32_t)25000000) /*!< Value of the External oscillator in Hz */
@@ -173,7 +174,25 @@
   * @retval None
   */
 void SystemInit (void)
-{
+{    
+  uint32_t i, size;
+
+  extern uint8_t __noncacheable_bss_start__[], __noncacheable_bss_end__[];
+  extern uint8_t __noncacheable_init_start__[], __noncacheable_init_end__[];
+  extern uint8_t __noncacheable_init_load_addr__[];
+  
+  /* noncacheable bss section */
+  size = __noncacheable_bss_end__ - __noncacheable_bss_start__;
+  for (i = 0; i < size;  i += sizeof(uint64_t)) {
+      *(uint64_t *)(__noncacheable_bss_start__ + i) = 0;
+  }
+
+  /* noncacheable init section LMA: etext + data length + ramfunc legnth + tdata length*/
+  size = __noncacheable_init_end__ - __noncacheable_init_start__;
+  for (i = 0; i < size; i += sizeof(uint64_t)) {
+      *(uint64_t *)(__noncacheable_init_start__ + i) = *(uint64_t *)(__noncacheable_init_load_addr__ + i);
+  }
+
   /* Configure the Vector Table location -------------------------------------*/
 #if defined(USER_VECT_TAB_ADDRESS)
   SCB->VTOR = VECT_TAB_BASE_ADDRESS | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal D1 AXI-RAM or in Internal FLASH */

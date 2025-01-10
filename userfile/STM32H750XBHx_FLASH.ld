@@ -176,6 +176,25 @@ SECTIONS
     . = ALIGN(8);
   } > EXSDRAM AT > EXFLASH
 
+  __noncacheable_init_load_addr__ = _sidata + SIZEOF(.data);
+  .noncacheable.init : AT(__noncacheable_init_load_addr__) {
+      . = ALIGN(8);
+      __noncacheable_init_start__ = .;
+      KEEP(*(.noncacheable.init))
+      __noncacheable_init_end__ = .;
+      . = ALIGN(8);
+  } > RAM_AXI1
+
+  .noncacheable.bss (NOLOAD) : {
+    . = ALIGN(8);
+    KEEP(*(.noncacheable))
+    __noncacheable_bss_start__ = .;
+    KEEP(*(.noncacheable.bss))
+    __noncacheable_bss_end__ = .;
+    . = ALIGN(8);
+  } > RAM_AXI1
+
+
   ._user_heap :
   {
     . = ALIGN(8);

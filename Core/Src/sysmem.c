@@ -21,8 +21,12 @@
  */
 
 /* Includes */
+#include "FreeRTOS.h"
+#include "task.h"
 #include <errno.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <sys/cdefs.h>
 
 /**
  * Pointer to the current high watermark of the heap usage
@@ -52,26 +56,64 @@ static uint8_t *__sbrk_heap_end = NULL;
  */
 void *_sbrk(ptrdiff_t incr)
 {
-  extern uint8_t __heap_start__;
-  extern uint8_t __heap_end__;
-  
-  uint8_t *prev_heap_end;
+    extern uint8_t __heap_start__;
+    extern uint8_t __heap_end__;
 
-  /* Initialize heap end at first call */
-  if (NULL == __sbrk_heap_end)
-  {
-    __sbrk_heap_end = &__heap_start__;
-  }
+    uint8_t *prev_heap_end;
 
-  /* Protect heap from growing into the reserved MSP stack */
-  if (__sbrk_heap_end + incr > &__heap_end__)
-  {
-    errno = ENOMEM;
-    return (void *)-1;
-  }
+    /* Initialize heap end at first call */
+    if (NULL == __sbrk_heap_end)
+    {
+        __sbrk_heap_end = &__heap_start__;
+    }
 
-  prev_heap_end = __sbrk_heap_end;
-  __sbrk_heap_end += incr;
+    /* Protect heap from growing into the reserved MSP stack */
+    if (__sbrk_heap_end + incr > &__heap_end__)
+    {
+        errno = ENOMEM;
+        return (void *)-1;
+    }
 
-  return (void *)prev_heap_end;
+    prev_heap_end = __sbrk_heap_end;
+    __sbrk_heap_end += incr;
+
+    return (void *)prev_heap_end;
+}
+
+void *app_malloc(size_t xWantedSize)
+{
+    void *pvReturn;
+
+    vTaskSuspendAll();
+    {
+        pvReturn = malloc(xWantedSize);
+    }
+    (void)xTaskResumeAll();
+
+    return pvReturn;
+}
+/*-----------------------------------------------------------*/
+
+void app_free(void *pv)
+{
+    if (pv)
+    {
+        vTaskSuspendAll();
+        {
+            free(pv);
+            traceFREE(pv, 0);
+        }
+        (void)xTaskResumeAll();
+    }
+}
+
+void *app_realloc(void *p, size_t s)
+{
+    void *pvReturn;
+    vTaskSuspendAll();
+    {
+        pvReturn = realloc(p, s);
+    }
+    (void)xTaskResumeAll();
+    return pvReturn;
 }
