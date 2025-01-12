@@ -5,13 +5,18 @@
 #include "stm32h7xx_hal_def.h"
 #include "stm32h7xx_hal_gpio.h"
 #include "stm32h7xx_hal_i2c.h"
+#include "sysmem.h"
 #include <FreeRTOS.h>
 #include <cmsis_os.h>
 #include <semphr.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/cdefs.h>
-#include "sysmem.h"
+
+
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif /* MIN */
 
 // #define GT_CMD_WR 0X28 // 写命令
 // #define GT_CMD_RD 0X29 // 读命令
@@ -34,18 +39,9 @@ static SemaphoreHandle_t iic_semaphore;
 static SemaphoreHandle_t exit_semaphore;
 static TaskHandle_t gt9147_task_handle;
 
-typedef struct
-{
-    uint16_t x;
-    uint16_t y;
-    uint16_t size;
-    uint8_t track_id;
-} GT9147_Point_t;
-
 static uint8_t dma_buf[8] AT_NONCACHEABLE_BSS;
 static GT9147_Point_t gt9147_points[5] AT_NONCACHEABLE_BSS;
 static uint8_t gt9147_touch_num;
-
 
 const uint8_t GT9147_CFG_TBL[] = {
     0X60, 0XE0, 0X01, 0X20, 0X03, 0X05, 0X35, 0X00, 0X02, 0X08, 0X1E, 0X08, 0X50, 0X3C, 0X0F, 0X05, 0X00, 0X00, 0XFF,
@@ -135,7 +131,7 @@ static void gt9147_task(void *args)
     {
         if (xSemaphoreTake(exit_semaphore, portMAX_DELAY) != pdPASS)
             continue;
-        
+
         gt9147_read_reg(GT_GSTID_REG, dma_buf, 1);
         mode = dma_buf[0];
         if ((mode & 0x80) == 0)
@@ -161,4 +157,10 @@ void gt9147_init()
     HAL_I2C_RegisterCallback(&hi2c1, HAL_I2C_MEM_TX_COMPLETE_CB_ID, gt9147_iic_complete_cb);
 
     xTaskCreate(gt9147_task, "gt9147", 256, NULL, 25, &gt9147_task_handle);
+}
+
+int gt9147_get_touch(GT9147_Point_t *points, int buf_num)
+{
+    memcpy(points, gt9147_points, sizeof(GT9147_Point_t) * MIN(gt9147_touch_num, buf_num));
+    return gt9147_touch_num;
 }

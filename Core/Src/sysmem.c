@@ -57,19 +57,19 @@ static uint8_t *__sbrk_heap_end = NULL;
  */
 void *_sbrk(ptrdiff_t incr)
 {
-    extern uint8_t __heap_start__;
-    extern uint8_t __heap_end__;
+    extern uint8_t __heap_start__[];
+    extern uint8_t __heap_end__[];
 
     uint8_t *prev_heap_end;
 
     /* Initialize heap end at first call */
     if (NULL == __sbrk_heap_end)
     {
-        __sbrk_heap_end = &__heap_start__;
+        __sbrk_heap_end = __heap_start__;
     }
 
     /* Protect heap from growing into the reserved MSP stack */
-    if (__sbrk_heap_end + incr > &__heap_end__)
+    if (__sbrk_heap_end + incr > __heap_end__)
     {
         errno = ENOMEM;
         return (void *)-1;

@@ -29,6 +29,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "SEGGER_RTT.h"
 #include "usbd_hid.h"
 
 /* USER CODE END Includes */
@@ -116,7 +117,7 @@ int main(void)
   MX_I2C1_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-
+  SEGGER_RTT_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

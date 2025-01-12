@@ -7,7 +7,7 @@
 **  Author		: STM32CubeMX
 **
 **  Abstract    : Linker script for STM32H750XBHx series
-**                16908288Kbytes EXFLASH and 0Kbytes RAM
+**                16908288Kbytes QSPIFLASH and 0Kbytes DTCMRAM
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
@@ -53,26 +53,25 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
+_estack = ORIGIN(DTCMRAM) + LENGTH(DTCMRAM);    /* end of DTCMRAM */
 
 /* Specify the memory areas */
 MEMORY
 {
-  RAM (rwx)      : ORIGIN = 0x20000000, LENGTH = 128K
+  DTCMRAM (rwx)      : ORIGIN = 0x20000000, LENGTH = 128K
   RAM_AXI0 (rwx)      : ORIGIN = 0x24000000, LENGTH = 256K
   RAM_D2 (rwx)      : ORIGIN = 0x30000000, LENGTH = 288K
   RAM_D3 (rwx)      : ORIGIN = 0x38000000, LENGTH = 64K
   ITCMRAM (rwx)      : ORIGIN = 0x00000000, LENGTH = 64K
   RAM_AXI1 (rwx)      : ORIGIN = 0x24040000, LENGTH = 256K
   EXSDRAM (rw)      : ORIGIN = 0xc0000000, LENGTH = 32M
-  EXFLASH (rx)      : ORIGIN = 0x90000000, LENGTH = 16M
-  /* RAM (rwx)      : ORIGIN = 0xc0000000, LENGTH = 32M */
+  QSPIFLASH (rx)      : ORIGIN = 0x90000000, LENGTH = 16M
 }
 
 /* Define output sections */
 SECTIONS
 {
-  /* The startup code goes first into EXFLASH */
+  /* The startup code goes first into QSPIFLASH */
   .isr_vector :
   {
     . = ALIGN(4);
@@ -80,7 +79,7 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     __isr_vector_end__ = .;
     . = ALIGN(4);
-  } >EXFLASH
+  } >QSPIFLASH
 
   .fast_ram :
   {
@@ -90,10 +89,10 @@ SECTIONS
     KEEP(*(.text._fast_ram_*))
     __fast_ram_end__ = .;
     . = ALIGN(8);
-  } > ITCMRAM AT> EXFLASH
+  } > ITCMRAM AT> QSPIFLASH
   __fast_ram_init_load_addr__ = LOADADDR(.fast_ram);
 
-  /* The program code and other data goes into EXFLASH */
+  /* The program code and other data goes into QSPIFLASH */
   .text :
   {
     . = ALIGN(4);
@@ -108,49 +107,49 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >EXFLASH
+  } >QSPIFLASH
 
-  /* Constant data goes into EXFLASH */
+  /* Constant data goes into QSPIFLASH */
   .rodata :
   {
     . = ALIGN(4);
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
-  } >EXFLASH
+  } >QSPIFLASH
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >EXFLASH
+  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >QSPIFLASH
   .ARM : {
     __exidx_start = .;
     *(.ARM.exidx*)
     __exidx_end = .;
-  } >EXFLASH
+  } >QSPIFLASH
 
   .preinit_array     :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >EXFLASH
+  } >QSPIFLASH
   .init_array :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
-  } >EXFLASH
+  } >QSPIFLASH
   .fini_array :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(SORT(.fini_array.*)))
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
-  } >EXFLASH
+  } >QSPIFLASH
 
   /* used by the startup to initialize data */
   __data_load_addr__ = LOADADDR(.data);
 
-  /* Initialized data sections goes into RAM, load LMA copy after code */
+  /* Initialized data sections goes into DTCMRAM, load LMA copy after code */
   .data : 
   {
     . = ALIGN(4);
@@ -160,7 +159,7 @@ SECTIONS
 
     . = ALIGN(4);
     __data_end__ = .;        /* define a global symbol at data end */
-  } > RAM AT> EXFLASH
+  } > DTCMRAM AT> QSPIFLASH
 
   
   /* Uninitialized data section */
@@ -177,8 +176,27 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } > RAM
+  } > DTCMRAM
 
+  .axisram.data : {
+    . = ALIGN(4);
+    __axisram_data_start_addr__ = .;
+    *(.data)           /* .data sections */
+    *(.data*)          /* .data* sections */
+    __axisram_data_end_addr__ = .;
+    . = ALIGN(4);
+  } > RAM_AXI0 AT> QSPIFLASH
+  __axisram_data_load_addr__ = LOADADDR(.axisram.data);
+
+  .axisram.bss (NOLOAD) : {
+    . = ALIGN(4);
+    __axisram_bss_start_addr__ = .;
+    *(.bss)
+    *(.bss*)
+    *(COMMON)
+    __axisram_bss_end_addr__ = .;
+    . = ALIGN(4);
+  } > RAM_AXI0 AT> QSPIFLASH
 
   .noncacheable.init : {
       . = ALIGN(8);
@@ -186,7 +204,7 @@ SECTIONS
       KEEP(*(.noncacheable.init))
       __noncacheable_init_end__ = .;
       . = ALIGN(8);
-  } > RAM_AXI1 AT> EXFLASH
+  } > RAM_AXI1 AT> QSPIFLASH
   __noncacheable_init_load_addr__ = LOADADDR(.noncacheable.init);
 
   .noncacheable.bss (NOLOAD) : {
@@ -199,7 +217,7 @@ SECTIONS
   } > RAM_AXI1
 
   . = ORIGIN(EXSDRAM);
-  .sdram :
+  .sdram (NOLOAD) :
   {
     . = ALIGN(8);
     KEEP(*(.sdram))

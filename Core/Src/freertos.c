@@ -19,6 +19,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
+#include "portmacro.h"
+#include "projdefs.h"
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -29,6 +31,7 @@
 #include "usb_device.h"
 #include "GT9147_driver.h"
 #include "lvgl_driver.h"
+#include "queue.h"
 
 /* USER CODE END Includes */
 
@@ -124,6 +127,11 @@ typedef struct
     uint8_t keys[6];
 } KeyboardData_t;
 
+static QueueHandle_t usb_event_handel;
+
+
+#define KEY_DELAY 20
+
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
@@ -135,35 +143,39 @@ void StartDefaultTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
+  UNUSED(argument);
+  
+  usb_event_handel = xQueueCreate(4, sizeof(const char *));
   gt9147_init();
   lvgl_init();
   /* Infinite loop */
   for(;;)
   {
-      HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-      vTaskDelay(300);
-
-      if (HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET)
+      const char *keyseq = NULL;
+      BaseType_t ret = xQueueReceive(usb_event_handel, &keyseq, 300);
+      if (ret == pdPASS && keyseq != NULL)
       {
-          HAL_Delay(10);
-          if (HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET)
+          KeyboardData_t Data_Buffer = {};
+          Data_Buffer.L_ctrl = 1;
+          USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
+          vTaskDelay(KEY_DELAY);
+          for (const char *key = keyseq; *key != 0; key++)
           {
-              KeyboardData_t Data_Buffer = {};
-
-              Data_Buffer.L_shift = 1;
-              Data_Buffer.keys[0] = 4;
+              Data_Buffer.keys[0] = *key - 'A' + 4;
               USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
-
-              HAL_Delay(15);
-              Data_Buffer.L_shift = 0;
+              vTaskDelay(KEY_DELAY);
               Data_Buffer.keys[0] = 0;
               USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
-              HAL_Delay(15);
+              vTaskDelay(KEY_DELAY);
           }
-
-          while ((HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET))
-          {
-          }
+          vTaskDelay(KEY_DELAY);
+          Data_Buffer.L_ctrl = 0;
+          Data_Buffer.keys[0] = 0;
+          USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t *)&Data_Buffer, sizeof(Data_Buffer));
+      }
+      else
+      {
+          HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
       }
   }
   /* USER CODE END StartDefaultTask */
@@ -171,6 +183,9 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+int usb_push_keyseq(const char * const*seq, TickType_t xTicksToWait)
+{
+  return xQueueSend(usb_event_handel, seq, xTicksToWait);
+}
 /* USER CODE END Application */
 

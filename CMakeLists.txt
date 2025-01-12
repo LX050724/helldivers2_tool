@@ -42,8 +42,17 @@ add_executable(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
-add_subdirectory(Third_Party/lvgl)
 
+set(LV_CONF_BUILD_DISABLE_EXAMPLES YES)
+set(LV_CONF_BUILD_DISABLE_DEMOS YES)
+set(LV_CONF_BUILD_DISABLE_THORVG_INTERNAL YES)
+add_subdirectory(Third_Party/lvgl)
+get_target_property(MCU_INCLUDE stm32cubemx INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(lvgl PUBLIC ${MCU_INCLUDE})
+
+add_subdirectory(images)
+
+add_subdirectory(Third_Party/SEGGER_RTT_V812)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -55,7 +64,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/GT9147_driver.c
     Core/Src/lvgl_driver.c
+    Core/Src/lvgl_app.c
     Core/Src/app_main.c
+    Core/Src/helldivers.c
+    Core/Src/lv_font_simhei_16.c
+    Core/Src/lv_font_simhei_12.c
 )
 
 # Add include paths
@@ -66,16 +79,14 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
-    USER_VECT_TAB_ADDRESS
-    
 )
 
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
+    SEGGER_RTT
     lvgl
-    lvgl_demos
-    # Add user defined libraries
+    lvgl_images
 )
 
 # target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -N)
@@ -87,6 +98,4 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/userfile/usbd_hid.c ${CMAKE_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/userfile/usbd_hid.h ${CMAKE_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc/usbd_hid.h
 )
-
-target_link_libraries(lvgl stm32cubemx)
 
